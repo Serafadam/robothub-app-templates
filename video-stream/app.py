@@ -21,12 +21,12 @@ class BusinessLogic:
 
             current_time = time.time()
             # arbitrary condition for sending image events to RobotHub
-            if current_time - self.last_image_event_upload > CONFIGURATION["image_event_upload_interval"]:
+            if current_time - self.last_image_event_upload > CONFIGURATION["image_event_upload_interval"] * 60:
                 if detection.label == 'person':
                     self.last_image_event_upload = current_time
                     send_image_event(image=packet.frame, title='Person detected')
             # arbitrary condition for sending video events to RobotHub
-            if current_time - self.last_video_event_upload > CONFIGURATION["video_event_upload_interval"]:
+            if current_time - self.last_video_event_upload > CONFIGURATION["video_event_upload_interval"] * 60:
                 if detection.label == 'person':
                     self.last_video_event_upload = current_time
                     self.live_view.save_video_event(before_seconds=60, after_seconds=60, title="Interesting video")
@@ -40,5 +40,10 @@ class Application(BaseApplication):
 
         color = oak.create_camera(source='color', resolution="1080p", fps=30, encode='mjpeg')
         nn = oak.create_nn(model='yolov5n_coco_416x416', input=color)
-        self.business_logic.live_view = LiveView.create(device=oak, component=color, name="Color stream")
+        self.business_logic.live_view = LiveView.create(
+            device=oak,
+            component=color,
+            name="Color stream",
+            max_buffer_size=120
+        )
         oak.callback(output=nn.out.main, callback=self.business_logic.process_packets)
